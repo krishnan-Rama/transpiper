@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=Mamestra_b_160124
-#SBATCH --partition=epyc
+#SBATCH --partition=<HPC_partition>
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=2

@@ -1,13 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=A_aura_test
-#SBATCH --partition=epyc
+#SBATCH --job-name=<pipeline>
+#SBATCH --partition=<HPC_partition>
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24000
-#SBATCH --error=${log}/star_align_%J.err
-#SBATCH --output=${log}/star_align_%J.out
 
 set -euo pipefail
 

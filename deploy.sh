@@ -65,28 +65,91 @@ sbatch -d singleton --error="${log}/fastp_%J.err" --output="${log}/fastp_%J.out"
 sbatch -d singleton --error="${log}/kraken2_%J.err" --output="${log}/kraken2__%J.out" "${moduledir}/kraken.sh"
 sbatch -d singleton --error="${log}/kraken2_%J.err" --output="${log}/kraken2__%J.out" "${moduledir}/2B-kraken2.sh"
 
+#####---------------------------------------------------------------------------------
 # Step 2C: rcorrector
-rcorrector_jobid=$(sbatch --parsable -d singleton --error="${log}/rcor_%J.err" --output="${log}/rcor__%J.out" "${moduledir}/2C-rcorrector.sh")
+rcorrector_script="${moduledir}/2C-rcorrector.sh"
+
+# Detect whether rcorrector already ran by checking for .cor.fq.gz output files
+cor_files_found=$(find "${rcordir}" -maxdepth 1 -type f -name "*_1.cor.fq.gz" | wc -l)
+
+if (( cor_files_found > 0 )); then
+    echo "✅ Detected existing .cor.fq.gz files — assuming rcorrector already completed."
+    rcorrector_jobid="manual"
+else
+    if [[ ! -f "$rcorrector_script" ]]; then
+        echo "❌ ERROR: rcorrector script not found at $rcorrector_script"
+        exit 1
+    fi
+
+    rcorrector_jobid=$(sbatch --parsable -d singleton \
+        --error="${log}/rcor_%J.err" \
+        --output="${log}/rcor__%J.out" \
+        --export=ALL,pipedir="${pipedir}",log="${log}",rawdir="${rawdir}",rcordir="${rcordir}",krakendir="${krakendir}" \
+        "$rcorrector_script")
+
+    if [[ -z "$rcorrector_jobid" ]]; then
+        echo "❌ ERROR: rcorrector job did not submit correctly!"
+        exit 1
+    else
+        echo "✅ rcorrector job submitted with job ID: $rcorrector_jobid"
+    fi
+fi
 
 # Assembly step logic
 if [[ "$ASSEMBLY_MODE" == "genome_guided" ]]; then
-    echo "Preparing genome-guided assembly..."
+    echo "🧬 Preparing genome-guided assembly..."
 
-    # Submit STAR job after rcorrector
-    align_jobid=$(sbatch --parsable --dependency=afterok:${rcorrector_jobid} "${moduledir}/align_with_star.sh")
+    if [[ "$rcorrector_jobid" == "manual" ]]; then
+        echo "📌 Submitting STAR alignment without dependency (rcorrector done already)"
+        align_jobid=$(sbatch --parsable \
+            --error="${log}/star_align_%J.err" \
+            --output="${log}/star_align_%J.out" \
+            --export=ALL,REFERENCE_GENOME="${REFERENCE_GENOME}",pipedir="${pipedir}",log="${log}",rcordir="${rcordir}",workdir="${workdir}" \
+            "${moduledir}/align_with_star.sh")
+    else
+        echo "📌 Submitting STAR alignment with dependency on rcorrector: $rcorrector_jobid"
+        align_jobid=$(sbatch --parsable \
+            --dependency=afterok:${rcorrector_jobid} \
+            --error="${log}/star_align_%J.err" \
+            --output="${log}/star_align_%J.out" \
+            --export=ALL,REFERENCE_GENOME="${REFERENCE_GENOME}",pipedir="${pipedir}",log="${log}",rcordir="${rcordir}",workdir="${workdir}" \
+            "${moduledir}/align_with_star.sh")
+    fi
 
     if [[ -z "$align_jobid" ]]; then
         echo "❌ ERROR: STAR alignment job did not submit correctly!"
         exit 1
+    else
+        echo "✅ STAR alignment job submitted with job ID: $align_jobid"
     fi
 
-    echo "Submitting Trinity (genome-guided) with dependency on STAR..."
-    sbatch --dependency=afterok:${align_jobid} --error="${log}/assembly_%J.err" --output="${log}/assembly_%J.out" "${moduledir}/3-trinity_assembly.sh"
+    echo "🚀 Submitting Trinity (genome-guided) with dependency on STAR..."
+    sbatch --dependency=afterok:${align_jobid} \
+        --error="${log}/assembly_%J.err" \
+        --output="${log}/assembly_%J.out" \
+        --export=ALL,pipedir="${pipedir}",log="${log}",rcordir="${rcordir}",assemblydir="${assemblydir}" \
+        "${moduledir}/3-trinity_assembly.sh"
 
 else
-    echo "Submitting Trinity (de novo) with dependency on rcorrector..."
-    sbatch --dependency=afterok:${rcorrector_jobid} --error="${log}/assembly_%J.err" --output="${log}/assembly_%J.out" "${moduledir}/3-trinity_assembly.sh"
+    echo "🚀 Submitting Trinity (de novo)..."
+
+    if [[ "$rcorrector_jobid" == "manual" ]]; then
+        sbatch \
+            --error="${log}/assembly_%J.err" \
+            --output="${log}/assembly_%J.out" \
+            --export=ALL,pipedir="${pipedir}",log="${log}",rcordir="${rcordir}",assemblydir="${assemblydir}" \
+            "${moduledir}/3-trinity_assembly.sh"
+    else
+        sbatch \
+            --dependency=afterok:${rcorrector_jobid} \
+            --error="${log}/assembly_%J.err" \
+            --output="${log}/assembly_%J.out" \
+            --export=ALL,pipedir="${pipedir}",log="${log}",rcordir="${rcordir}",assemblydir="${assemblydir}" \
+            "${moduledir}/3-trinity_assembly.sh"
+    fi
 fi
+
+#####---------------------------------------------------------------------------------
 
 # Step 1B: FastQC post-processed
 sbatch -d singleton --error="${log}/rawqc_2_%J.err" --output="${log}/rawqc_2_%J.out" "${moduledir}/1B-fastqc_array.sh"
