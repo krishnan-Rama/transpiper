@@ -19,7 +19,7 @@ git clone https://github.com/krishnan-Rama/transpipeline_containerised.git
 4. The prompt will ask you to:
    - 1- enter your preferred HPC partition name to submit the job
    - 2- If you have a reference genome or not,
-   - 3- Path to the reference genome,and/or
+   - 3- Path to the reference genome, and/or
    - 4- the species/project identifier (e.g. Hsap or Hsap_200524 for _Homo sapiens_), simply type the name and return (it doesn't really matter).
 
 > **Note:** 
