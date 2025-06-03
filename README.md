@@ -12,7 +12,9 @@ For containerized deployment, refer to:
 1. Clone the repository into your working directory on the HPC system:
 
 ```bash
-git clone https://github.com/your-username/transpipeline.git
+git clone https://github.com/krishnan-Rama/transpiper.git
+```
+```bash
 cd transpipeline
 ```
 
