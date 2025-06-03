@@ -54,9 +54,9 @@ cd transpipeline
 You can run multiple independent projects by cloning this repo into different directories and providing separate `raw_data/` and identifiers:
 
 ```bash
-git clone https://github.com/your-username/transpipeline.git my_project_A
+git clone https://github.com/krishnan-Rama/transpiper.git my_project_A
 cd my_project_A
-./deploy_pipeline.sh -p batch -n my_project_A
+./deploy_pipeline.sh -p <partition> -n my_project_A
 ```
 
 ---
