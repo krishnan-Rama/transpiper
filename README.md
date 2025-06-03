@@ -30,16 +30,14 @@ cd transpipeline
 ./deploy_pipeline.sh -p <HPC_partition> -n <project_name> [-r reference.fasta -g annotation.gtf]
 ```
 
----
+#### 🧪 Runtime Options
 
-### 🧪 Runtime Options
-
-### Required
+#### Required
 
 * `-p`: SLURM partition to submit jobs (e.g., `short`, `cpu`)
 * `-n`: Project name or species identifier (e.g., `Hsap`, `mouse2025`)
 
-### Optional
+#### Optional
 
 * `-r`: Reference genome file (`.fasta`)
 * `-g`: Genome annotation file (`.gtf`)
