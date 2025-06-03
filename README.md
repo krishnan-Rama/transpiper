@@ -30,7 +30,7 @@ cd transpipeline
 ./deploy_pipeline.sh -p <HPC_partition> -n <project_name> [-r reference.fasta -g annotation.gtf]
 ```
 
-#### 🧪 Runtime Options
+#### Runtime Options
 
 #### Required
 
