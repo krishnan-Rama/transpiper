@@ -9,63 +9,85 @@
 
 set -euo pipefail
 
-# Load STAR module instead of using Singularity
+# Load STAR module
 module load STAR/2.7.3a
 
 # Settings
-WORKINGDIR=${pipedir}
-STAR_INDEX="${workdir}/star_index"
+WORKINGDIR="${pipedir}"
+STAR_INDEX="${workdir}/star_index_clean"
 
 # Create STAR index directory
 mkdir -p "$STAR_INDEX"
 
-# Decompress genome if needed
+# Clean and decompress reference genome if needed
 if [[ "${REFERENCE_GENOME}" == *.gz ]]; then
-    echo "Unzipping reference genome..."
-    gunzip -c "$REFERENCE_GENOME" > "${STAR_INDEX}/reference.fa"
-    GENOME="${STAR_INDEX}/reference.fa"
+    echo "🧼 Cleaning and decompressing reference genome..."
+    zcat "${REFERENCE_GENOME}" | sed 's/^\(>[0-9A-Za-z]\+\) .*/\1/' > "${STAR_INDEX}/reference_clean.fa"
+    GENOME="${STAR_INDEX}/reference_clean.fa"
 else
-    GENOME="${REFERENCE_GENOME}"
+    echo "🧼 Cleaning uncompressed reference genome..."
+    sed 's/^\(>[0-9A-Za-z]\+\) .*/\1/' "${REFERENCE_GENOME}" > "${STAR_INDEX}/reference_clean.fa"
+    GENOME="${STAR_INDEX}/reference_clean.fa"
+fi
+
+# Decompress GTF if provided and needed
+if [[ -n "${GTF_FILE:-}" && -f "${GTF_FILE}" ]]; then
+    if [[ "${GTF_FILE}" == *.gz ]]; then
+        echo "🗜️    Decompressing GTF annotation..."
+        gunzip -c "${GTF_FILE}" > "${STAR_INDEX}/annotation.gtf"
+        GTF="${STAR_INDEX}/annotation.gtf"
+    else
+        GTF="${GTF_FILE}"
+    fi
+    SJDB_OPTS="--sjdbGTFfile ${GTF} --sjdbOverhang 99"
+else
+    SJDB_OPTS=""
 fi
 
 # Generate STAR index if not already present
 if [ ! -f "${STAR_INDEX}/SA" ]; then
-    echo "Generating STAR genome index..."
+    echo "🧬 Generating STAR genome index..."
     STAR \
         --runThreadN ${SLURM_CPUS_PER_TASK} \
         --runMode genomeGenerate \
         --genomeDir "$STAR_INDEX" \
-        --genomeFastaFiles "$GENOME"
+        --genomeFastaFiles "$GENOME" \
+        $SJDB_OPTS
 else
-    echo "Using existing STAR genome index at ${STAR_INDEX}"
+    echo "✅ Using existing STAR genome index at ${STAR_INDEX}"
 fi
 
 # Concatenate corrected reads
-echo "Concatenating corrected reads..."
+echo "📦 Concatenating corrected reads..."
 if compgen -G "${rcordir}/*_1.cor.fq.gz" > /dev/null && compgen -G "${rcordir}/*_2.cor.fq.gz" > /dev/null; then
     cat ${rcordir}/*_1.cor.fq.gz > ${rcordir}/all_1.fastq.gz
     cat ${rcordir}/*_2.cor.fq.gz > ${rcordir}/all_2.fastq.gz
 else
-    echo "ERROR: Corrected FASTQ files not found in ${rcordir}"
+    echo "❌ ERROR: Corrected FASTQ files not found in ${rcordir}"
     exit 1
 fi
 
-# Align reads and output sorted BAM
-echo "Aligning reads with STAR..."
+# Run STAR alignment
+echo "🚀 Aligning reads with STAR..."
 STAR \
     --runThreadN ${SLURM_CPUS_PER_TASK} \
     --genomeDir "$STAR_INDEX" \
-    --readFilesIn ${rcordir}/all_1.fastq.gz ${rcordir}/all_2.fastq.gz \
+    --readFilesIn "${rcordir}/all_1.fastq.gz" "${rcordir}/all_2.fastq.gz" \
     --readFilesCommand zcat \
     --outFileNamePrefix "${rcordir}/aligned_" \
-    --outSAMtype BAM SortedByCoordinate
+    --outSAMtype BAM SortedByCoordinate \
+    --outFilterMultimapNmax 1 \
+    --outSAMprimaryFlag AllBestScore \
+    --outSAMattributes NH HI AS nM
 
-# Rename the final BAM for Trinity
+# Rename STAR output BAM for Trinity
 OUTBAM="${rcordir}/aligned_Aligned.sortedByCoord.out.bam"
 if [ -f "$OUTBAM" ]; then
     mv "$OUTBAM" "${rcordir}/aligned.sorted.bam"
+    echo "✅ STAR alignment complete. Output: ${rcordir}/aligned.sorted.bam"
 else
-    echo "ERROR: STAR did not produce expected BAM output: $OUTBAM"
+    echo "❌ ERROR: STAR did not produce the expected BAM output: $OUTBAM"
     exit 1
 fi
+
 
