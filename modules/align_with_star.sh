@@ -4,7 +4,7 @@
 #SBATCH --partition=<HPC_partition>
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=16
 #SBATCH --mem=24000
 
 set -euo pipefail
