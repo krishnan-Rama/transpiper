@@ -66,9 +66,9 @@ else
     echo "❌ ERROR: Corrected FASTQ files not found in ${rcordir}"
     exit 1
 fi
-
 # Run STAR alignment
 echo "🚀 Aligning reads with STAR..."
+
 STAR \
     --runThreadN ${SLURM_CPUS_PER_TASK} \
     --genomeDir "$STAR_INDEX" \
@@ -76,9 +76,17 @@ STAR \
     --readFilesCommand zcat \
     --outFileNamePrefix "${rcordir}/aligned_" \
     --outSAMtype BAM SortedByCoordinate \
-    --outFilterMultimapNmax 1 \
+    --outSAMunmapped Within \
+    --outSAMattributes NH HI AS nM MD \
     --outSAMprimaryFlag AllBestScore \
-    --outSAMattributes NH HI AS nM
+    --outSAMattrRGline ID:${SPECIES_IDENTIFIER} SM:${SPECIES_IDENTIFIER}
+
+# Run STAR alignment
+echo "🚀 Aligning reads with STAR..."
+
+echo "🔧 Indexing BAM file..."
+module load samtools/1.13
+samtools index "${rcordir}/aligned.sorted.bam"
 
 # Rename STAR output BAM for Trinity
 OUTBAM="${rcordir}/aligned_Aligned.sortedByCoord.out.bam"
@@ -89,5 +97,6 @@ else
     echo "❌ ERROR: STAR did not produce the expected BAM output: $OUTBAM"
     exit 1
 fi
+
 
 
