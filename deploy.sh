@@ -1,27 +1,36 @@
 #!/bin/bash
 
-# Source shared config
+# Source configs
 source config.parameters_all
 
 # Usage function
 usage() {
-    echo "Usage: $0 -p <HPC_partition> -n <project_name> [-r <reference_genome.fasta>] [-g <annotation.gtf>]"
+    echo "Usage: $0 -p <HPC_partition> -n <project_name> [-r <reference_genome.fasta>] [-g <annotation.gtf>] [--trinity-only]"
     exit 1
 }
 
-# Default to de novo unless specified
-ASSEMBLY_MODE="de_novo"
-
-# Parse command-line flags
-while getopts ":p:n:r:g:" opt; do
-    case ${opt} in
-        p ) HPC_partition="$OPTARG" ;;
-        n ) species_identifier="$OPTARG" ;;
-        r ) REFERENCE_GENOME="$OPTARG" ;;
-        g ) GTF_FILE="$OPTARG" ;;
-        \? | : ) usage ;;
-    esac
+# parse long flag
+TRINITY_ONLY=0
+for arg in "$@"; do
+  if [[ "$arg" == "--trinity-only" ]]; then
+    TRINITY_ONLY=1
+    # Remove it from $@ so getopts doesn't get confused
+    set -- "${@/--trinity-only/}"
+    break
+  fi
 done
+
+# Parse short flags
+while getopts ":p:n:r:g:" opt; do
+  case ${opt} in
+    p ) HPC_partition="$OPTARG" ;;
+    n ) species_identifier="$OPTARG" ;;
+    r ) REFERENCE_GENOME="$OPTARG" ;;
+    g ) GTF_FILE="$OPTARG" ;;
+    \? | : ) usage ;;
+  esac
+done
+
 
 # Validate required inputs
 if [[ -z "${HPC_partition:-}" || -z "${species_identifier:-}" ]]; then
@@ -49,6 +58,19 @@ export REFERENCE_GENOME
 export GTF_FILE
 export SPECIES_IDENTIFIER="$species_identifier"
 export assembly="$species_identifier"
+
+#-----------------Trinity-Only---------------
+if [[ "$TRINITY_ONLY" -eq 1 ]]; then
+  echo "🔍 Debug mode: Submitting Trinity genome-guided only..."
+  export ASSEMBLY_MODE=genome_guided
+  sbatch --error="${log}/trinity_debug.err" \
+         --output="${log}/trinity_debug.out" \
+         --export=ALL,ASSEMBLY_MODE=genome_guided,REFERENCE_GENOME="${REFERENCE_GENOME}",GTF_FILE="${GTF_FILE}",pipedir="${pipedir}",log="${log}",rcordir="${rcordir}",assemblydir="${assemblydir}",SPECIES_IDENTIFIER="${species_identifier}" \
+         "${moduledir}/3-trinity_assembly.sh"
+  exit 0
+fi
+#-----------------Trinity-Only---------------
+
 
 #-------------- Initial Jobs--------------------
 sbatch -d singleton --error="${log}/rawqc_%J.err" --output="${log}/rawqc_%J.out" "${moduledir}/0-pre.sh"
@@ -127,7 +149,8 @@ else
     fi
 fi
 
-#---------------------- Downstream jobs--------------
+
+# Downstream jobs
 sbatch -d singleton --error="${log}/rawqc_2_%J.err" --output="${log}/rawqc_2_%J.out" "${moduledir}/1B-fastqc_array.sh"
 sbatch -d singleton --error="${log}/evigene_%J.err" --output="${log}/evigene_%J.out" "${moduledir}/4-evigene.sh"
 sbatch -d singleton --error="${log}/trinitystats_%J.err" --output="${log}/trinitystats_%J.out" "${moduledir}/4b-trinitystats.sh"
