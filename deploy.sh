@@ -3,40 +3,77 @@
 # Source configs
 source config.parameters_all
 
-# Usage function
+# Enhanced Usage function
 usage() {
-    echo "Usage: $0 -p <HPC_partition> -n <project_name> [-r <reference_genome.fasta>] [-g <annotation.gtf>] [--trinity-only]"
-    exit 1
+    cat <<EOF
+Usage: $0 -p <HPC_partition> -n <project_name> [-r <reference_genome.fasta>] [-g <annotation.gtf>] [--trinity-only] [--help]
+
+Options:
+  -p <HPC_partition>    Specify the HPC partition to use (required)
+  -n <project_name>     Specify the project name (species identifier) (required)
+  -r <reference.fasta>  Specify the reference genome FASTA file (for genome-guided assembly)
+  -g <annotation.gtf>   Specify the annotation GTF file (for genome-guided assembly)
+  --trinity-only        Run only the Trinity assembly step (genome-guided) and exit (for debugging)
+  --help, -h            Show this help message and exit
+EOF
 }
 
-# parse long flag
+# Initialize flags
 TRINITY_ONLY=0
+HELP=0
+
+# Process long flags and help option
+new_args=()
 for arg in "$@"; do
-  if [[ "$arg" == "--trinity-only" ]]; then
-    TRINITY_ONLY=1
-    # Remove it from $@ so getopts doesn't get confused
-    set -- "${@/--trinity-only/}"
-    break
-  fi
+    case "$arg" in
+        --trinity-only)
+            TRINITY_ONLY=1
+            ;;
+        --help)
+            HELP=1
+            ;;
+        *)
+            new_args+=("$arg")
+            ;;
+    esac
 done
+set -- "${new_args[@]}"
 
-# Parse short flags
-while getopts ":p:n:r:g:" opt; do
-  case ${opt} in
-    p ) HPC_partition="$OPTARG" ;;
-    n ) species_identifier="$OPTARG" ;;
-    r ) REFERENCE_GENOME="$OPTARG" ;;
-    g ) GTF_FILE="$OPTARG" ;;
-    \? | : ) usage ;;
-  esac
+# Parse short flags (including -h for help)
+while getopts ":p:n:r:g:h" opt; do
+    case ${opt} in
+        p ) HPC_partition="$OPTARG" ;;
+        n ) species_identifier="$OPTARG" ;;
+        r ) REFERENCE_GENOME="$OPTARG" ;;
+        g ) GTF_FILE="$OPTARG" ;;
+        h ) HELP=1 ;;
+        \? )
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+        : )
+            echo "Option -$OPTARG requires an argument." >&2
+            usage
+            exit 1
+            ;;
+    esac
 done
+shift $((OPTIND -1))
 
+# Handle help request
+if [[ $HELP -eq 1 ]]; then
+    usage
+    exit 0
+fi
 
 # Validate required inputs
 if [[ -z "${HPC_partition:-}" || -z "${species_identifier:-}" ]]; then
     echo "❌ ERROR: Both -p (HPC partition) and -n (project name) are required."
     usage
+    exit 1
 fi
+
 
 # Set genome-guided mode only if both files exist
 if [[ -n "${REFERENCE_GENOME:-}" && -f "$REFERENCE_GENOME" && -n "${GTF_FILE:-}" && -f "$GTF_FILE" ]]; then
