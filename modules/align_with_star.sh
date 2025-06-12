@@ -9,31 +9,29 @@
 
 set -euo pipefail
 
-# Load STAR module
+# Load modules
 module load STAR/2.7.3a
+module load samtools/1.13
 
-# Settings
+# Paths
 WORKINGDIR="${pipedir}"
 STAR_INDEX="${workdir}/star_index_clean"
-
-# Create STAR index directory
 mkdir -p "$STAR_INDEX"
 
-# Clean and decompress reference genome if needed
+# Clean and prepare genome FASTA
 if [[ "${REFERENCE_GENOME}" == *.gz ]]; then
     echo "🧼 Cleaning and decompressing reference genome..."
-    zcat "${REFERENCE_GENOME}" | sed 's/^\(>[0-9A-Za-z]\+\) .*/\1/' > "${STAR_INDEX}/reference_clean.fa"
-    GENOME="${STAR_INDEX}/reference_clean.fa"
+    zcat "${REFERENCE_GENOME}" | sed 's/^\(>[0-9A-Za-z._-]\+\) .*/\1/' > "${STAR_INDEX}/reference_clean.fa"
 else
     echo "🧼 Cleaning uncompressed reference genome..."
-    sed 's/^\(>[0-9A-Za-z]\+\) .*/\1/' "${REFERENCE_GENOME}" > "${STAR_INDEX}/reference_clean.fa"
-    GENOME="${STAR_INDEX}/reference_clean.fa"
+    sed 's/^\(>[0-9A-Za-z._-]\+\) .*/\1/' "${REFERENCE_GENOME}" > "${STAR_INDEX}/reference_clean.fa"
 fi
+GENOME="${STAR_INDEX}/reference_clean.fa"
 
-# Decompress GTF if provided and needed
+# Prepare GTF
 if [[ -n "${GTF_FILE:-}" && -f "${GTF_FILE}" ]]; then
     if [[ "${GTF_FILE}" == *.gz ]]; then
-        echo "🗜️    Decompressing GTF annotation..."
+        echo "🗜️ Decompressing GTF annotation..."
         gunzip -c "${GTF_FILE}" > "${STAR_INDEX}/annotation.gtf"
         GTF="${STAR_INDEX}/annotation.gtf"
     else
@@ -44,7 +42,7 @@ else
     SJDB_OPTS=""
 fi
 
-# Generate STAR index if not already present
+# Generate genome index if missing
 if [ ! -f "${STAR_INDEX}/SA" ]; then
     echo "🧬 Generating STAR genome index..."
     STAR \
@@ -66,9 +64,9 @@ else
     echo "❌ ERROR: Corrected FASTQ files not found in ${rcordir}"
     exit 1
 fi
-# Run STAR alignment
-echo "🚀 Aligning reads with STAR..."
 
+# Run STAR alignment
+echo "🚀 Running STAR alignment..."
 STAR \
     --runThreadN ${SLURM_CPUS_PER_TASK} \
     --genomeDir "$STAR_INDEX" \
@@ -81,22 +79,26 @@ STAR \
     --outSAMprimaryFlag AllBestScore \
     --outSAMattrRGline ID:${SPECIES_IDENTIFIER} SM:${SPECIES_IDENTIFIER}
 
-# Run STAR alignment
-echo "🚀 Aligning reads with STAR..."
-
-echo "🔧 Indexing BAM file..."
-module load samtools/1.13
-samtools index "${rcordir}/aligned.sorted.bam"
-
-# Rename STAR output BAM for Trinity
+# Rename STAR output BAM to a standard name
 OUTBAM="${rcordir}/aligned_Aligned.sortedByCoord.out.bam"
-if [ -f "$OUTBAM" ]; then
-    mv "$OUTBAM" "${rcordir}/aligned.sorted.bam"
-    echo "✅ STAR alignment complete. Output: ${rcordir}/aligned.sorted.bam"
+TARGET="${rcordir}/aligned.sorted.bam"
+
+if [[ -f "$OUTBAM" ]]; then
+    mv "$OUTBAM" "$TARGET"
+    echo "✅ Renamed BAM: $TARGET"
 else
-    echo "❌ ERROR: STAR did not produce the expected BAM output: $OUTBAM"
+    echo "❌ ERROR: STAR did not generate expected BAM: $OUTBAM"
     exit 1
 fi
 
+# Index the BAM
+echo "🔧 Indexing BAM file..."
+samtools index "$TARGET"
 
-
+# Sanity check
+if [[ -f "$TARGET" && -f "${TARGET}.bai" ]]; then
+    echo "✅ BAM and index are ready for downstream steps."
+else
+    echo "❌ ERROR: BAM or index missing after alignment."
+    exit 1
+fi
