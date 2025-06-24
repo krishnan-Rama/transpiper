@@ -200,3 +200,4 @@ sbatch -d singleton --error="${log}/blastp_%J.err" --output="${log}/blastp_%J.ou
 sbatch -d singleton --error="${log}/upimapi_%J.err" --output="${log}/upimapi_%J.out" "${moduledir}/11-upimapi.sh"
 sbatch -d singleton --error="${log}/merge_%J.err" --output="${log}/merge_%J.out" "${moduledir}/12-datamerge.sh"
 sbatch -d singleton --error="${log}/database_%J.err" --output="${log}/database_%J.out" "${moduledir}/13-csv2db.sh"
+sbatch -d singleton --error="${log}/GEA_%J.err" --output="${log}/GEA_%J.out" "${moduledir}/14-go-enrichment.sh"
