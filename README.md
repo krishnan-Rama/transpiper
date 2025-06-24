@@ -87,5 +87,6 @@ To change resources like memory, CPUs, or time limits, edit the respective scrip
 6. Functional annotation: `BLAST`, `UPIMAPI`
 7. Summary report: `MultiQC`
 8. Final merge and SQLite database creation
+9. Gene Enrichment Analysis
 
 ---
