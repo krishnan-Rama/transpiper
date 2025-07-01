@@ -10,15 +10,14 @@
 module load singularity/3.8.7
 
 # === USER-DEFINED PATHS ===
-pipedir=/mnt/ecotox/GROUP-smbpk/c23048124/transpipeline/transpipeline_containerised
 imgdir=${pipedir}/singularities
 singimg=henryc101_clusterprofiler_4.10.0.sif
 dockerimg=henryc101/clusterprofiler:4.10.0
 
 # === MOUNT PATHS ===
 workdir=${pipedir}/workdir
-mergedir=${workdir}/mergedir/Mamestra_b_160124_combined_final.csv
-degfile=${workdir}/rsem/edgeR_results/Mamestra_b_160124_RSEM.gene.counts.matrix.Nc_vs_Wb.edgeR.DE_results
+mergedir=${workdir}/mergedir/${assembly}_combined_final.csv
+degfile=${workdir}/rsem/edgeR_results/${assembly}_RSEM.gene.counts.matrix.Nc_vs_Wb.edgeR.DE_results
 outdir=${workdir}/GEA
 script=${pipedir}/modules/go_enrichment_analysis.R
 
