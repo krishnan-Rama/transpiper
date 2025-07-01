@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --job-name=GO_enrichment
-#SBATCH --partition=epyc
+#SBATCH --job-name=<pipeline>
+#SBATCH --partition=<HPC_partition>
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
