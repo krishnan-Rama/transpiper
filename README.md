@@ -27,7 +27,7 @@ cd transpipeline
 4. Run the pipeline:
 
 ```bash
-./deploy_pipeline.sh -p <HPC_partition> -n <project_name> [-r reference.fasta -g annotation.gtf]
+./deploy.sh -p <HPC_partition> -n <project_name> -r reference.fasta -g annotation.gtf
 ```
 
 #### Run Options
