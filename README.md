@@ -20,11 +20,7 @@ cd transpipeline
 
 2. Place your raw reads in the `raw_data/` folder.
 
-3. Ensure the `config.parameters_all` file is updated with the correct paths for:
-
-   * `moduledir`, `pipedir`, `log`, `rawdir`, `rcordir`, `workdir`, etc.
-
-4. Run the pipeline:
+3. Run the pipeline:
 
 ```bash
 ./deploy.sh -p <HPC_partition> -n <project_name> -r /path/to/reference.fasta -g /path/to/annotation.gtf
