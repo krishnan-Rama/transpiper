@@ -1,6 +1,6 @@
 # transpiper
 
-**Transpipeline v4** — Now supports both **de novo** and **genome-guided** transcriptome assembly on SLURM-based HPC clusters.
+**Transpipeline v4** — Now supports both **de novo** and **genome-guided** transcriptome assembly, with differential gene expression and enrichment analysiS on SLURM-based HPC clusters.
 
 For additional post-annotation data query and analysis, refer to:
 👉 [https://github.com/krishnan-Rama/transpipeline\_containerised.git](https://github.com/krishnan-Rama/transpipeline_containerised.git)
