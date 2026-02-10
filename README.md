@@ -15,7 +15,7 @@ For additional post-annotation data query and analysis, refer to:
 git clone https://github.com/krishnan-Rama/transpiper.git
 ```
 ```bash
-cd transpipeline
+cd transpiper
 ```
 
 2. Place your raw reads in the `raw_data/` folder.
