@@ -87,6 +87,7 @@ To change resources like memory, CPUs, or time limits, edit the respective scrip
 
 ---
 
+```mermaid
 flowchart TD
 
 subgraph group_orchestration["Orchestration"]
@@ -182,3 +183,4 @@ class node_raw_reads,node_quality_control,node_contamination,node_error_correcti
 class node_star_guidance,node_trinity,node_evaluation,node_quantification,node_differential_expression toneMint
 class node_blast,node_upimapi,node_reporting,node_data_merge toneRose
 class node_csv_database,node_gene_database,node_gene_query,node_enrichment,node_merged_csv,node_researcher toneIndigo
+```
