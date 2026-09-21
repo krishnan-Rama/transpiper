@@ -87,6 +87,8 @@ To change resources like memory, CPUs, or time limits, edit the respective scrip
 
 ---
 
+## transpiper Architecture
+
 ```mermaid
 flowchart TD
 
